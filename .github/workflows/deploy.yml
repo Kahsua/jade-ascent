@@ -1,0 +1,43 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ZIP entpacken
+        run: |
+          rm -rf site && mkdir site
+          unzip -q game.zip -d site
+          count=$(ls site | wc -l)
+          if [ "$count" = "1" ] && [ -d "site/$(ls site)" ]; then
+            inner="site/$(ls site)"
+            mv "$inner" site_inner && rm -rf site && mv site_inner site
+          fi
+          ls -la site
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
